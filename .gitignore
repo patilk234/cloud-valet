@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.egg-info/
+venv*/
+.venv/
+.env
+
+# VSCode
+.vscode/
+
+# Node
+node_modules/
+
+# Mac/OSX
+.DS_Store
+
+# Docker
+*.pid
+
+# Test/coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Logs
+*.log
+
+# Frontend build
+cloud-valet-frontend/build/
+cloud-valet-frontend/dist/
+
+# Misc
+*.swp
+*.swo
+.idea/
+
+# Ignore local settings
+cloud-valet-frontend/.env
+Cloud-Valet/app/.env
