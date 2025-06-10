@@ -1,26 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Menu, Button } from 'antd';
 import { HomeOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = "http://localhost:8000";
-
-const Navbar = ({ onLogout }) => {
-  const [username, setUsername] = useState(null);
+const Navbar = ({ onLogout, username }) => {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch(`${API_BASE}/users/me`, { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          setUsername(data.username);
-        }
-      } catch {}
-    }
-    fetchUser();
-  }, []);
 
   return (
     <div style={{

@@ -3,7 +3,7 @@ import { Card } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 
-const Dashboard = () => {
+const Dashboard = ({ username }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -13,7 +13,7 @@ const Dashboard = () => {
 
   return (
     <div>
-      <Navbar onLogout={handleLogout} />
+      <Navbar onLogout={handleLogout} username={username} />
       <div style={{ padding: 32 }}>
         <h1>Welcome to Cloud Valet Dashboard</h1>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 64px)' }}>

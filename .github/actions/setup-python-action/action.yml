@@ -1,0 +1,16 @@
+name: 'Setup Python and Install Requirements'
+description: 'Set up Python and install requirements for FastAPI backend'
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio httpx
+      shell: bash
+      working-directory: Cloud-Valet/app

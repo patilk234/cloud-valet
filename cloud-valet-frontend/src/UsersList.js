@@ -214,7 +214,7 @@ const UsersList = ({ refreshKey }) => {
         onCancel={() => { setEditModalOpen(false); setEditError(null); }}
         onOk={handleEditOk}
         okText="Update"
-        destroyOnClose
+        destroyOnHidden
         confirmLoading={editLoading}
       >
         {editError && <Alert type="error" message={editError} showIcon style={{ marginBottom: 16 }} />}

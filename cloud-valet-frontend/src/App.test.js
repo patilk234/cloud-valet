@@ -63,7 +63,7 @@ test('renders dashboard and shows username in navbar', async () => {
     );
     expect(matches.length).toBeGreaterThan(0);
   });
-  expect(screen.getByText(/Hello, admin/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Hello, admin/i)).toBeInTheDocument());
   expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
 });
 
@@ -73,7 +73,7 @@ test('renders settings and shows Users/Permissions for admin', async () => {
   // Wait for Add User button (robust indicator of admin access)
   await waitFor(() => expect(screen.getByText(/Add User/i)).toBeInTheDocument());
   expect(screen.getByText(/Permissions/i)).toBeInTheDocument();
-  expect(screen.getByText(/Hello, admin/i)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText(/Hello, admin/i)).toBeInTheDocument());
 });
 
 test('redirects to login if not authenticated', async () => {

@@ -10,7 +10,7 @@ const { Sider, Content } = Layout;
 // Set your backend API base URL here
 const API_BASE = "http://localhost:8000";
 
-const Settings = () => {
+const Settings = ({ username }) => {
   const [selectedKey, setSelectedKey] = useState('users');
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -104,7 +104,7 @@ const Settings = () => {
 
   return (
     <div>
-      <Navbar onLogout={handleLogout} />
+      <Navbar onLogout={handleLogout} username={username} />
       <Layout style={{ minHeight: '100vh' }}>
         <Sider width={240} style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}>
           <Menu
@@ -231,7 +231,7 @@ const Settings = () => {
         onCancel={() => setModifyModalOpen(false)}
         onOk={handleBulkModify}
         okText="Update"
-        destroyOnClose
+        destroyOnHidden
       >
         <div style={{ marginBottom: 16 }}>
           <label><b>Select Users</b></label>

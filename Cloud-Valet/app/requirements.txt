@@ -9,3 +9,4 @@ passlib
 jinja2
 httpx
 pytest
+python-multipart

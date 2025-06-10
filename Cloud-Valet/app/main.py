@@ -145,6 +145,16 @@ async def list_groups(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Group))
     return result.scalars().all()
 
+@app.delete("/groups/{name}")
+async def delete_group(name: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Group).where(models.Group.name == name))
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    await db.delete(group)
+    await db.commit()
+    return {"ok": True}
+
 # Tag CRUD
 @app.post("/tags/")
 async def create_tag(name: str, db: AsyncSession = Depends(get_db)):
@@ -159,6 +169,16 @@ async def list_tags(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Tag))
     return result.scalars().all()
 
+@app.delete("/tags/{name}")
+async def delete_tag(name: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Tag).where(models.Tag.name == name))
+    tag = result.scalar_one_or_none()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    await db.delete(tag)
+    await db.commit()
+    return {"ok": True}
+
 # VM CRUD
 @app.post("/vms/")
 async def create_vm(name: str, db: AsyncSession = Depends(get_db)):
@@ -172,6 +192,16 @@ async def create_vm(name: str, db: AsyncSession = Depends(get_db)):
 async def list_vms(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.VM))
     return result.scalars().all()
+
+@app.delete("/vms/{name}")
+async def delete_vm(name: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.VM).where(models.VM.name == name))
+    vm = result.scalar_one_or_none()
+    if not vm:
+        raise HTTPException(status_code=404, detail="VM not found")
+    await db.delete(vm)
+    await db.commit()
+    return {"ok": True}
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):

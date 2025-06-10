@@ -41,7 +41,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }) => {
       onOk={handleOk}
       confirmLoading={loading}
       okText="Add"
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item name="username" label="Username" rules={[{ required: true, message: 'Please enter username' }]}> 

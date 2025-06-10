@@ -10,6 +10,9 @@ venv*/
 .venv/
 .env
 
+#ACT
+.actrc
+
 # VSCode
 .vscode/
 
