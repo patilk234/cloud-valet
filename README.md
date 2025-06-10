@@ -1,6 +1,20 @@
-# Cloud Valet FastAPI Scaffold
+> **Note:** This project is in active development. Not all features are available yet. Contributions and feedback are welcome!
+
+# Cloud Valet
 
 [![CI](https://github.com/patilk234/cloud-valet/actions/workflows/ci.yml/badge.svg)](https://github.com/patilk234/cloud-valet/actions/workflows/ci.yml)
+
+## Product Description
+
+**Cloud Valet** is an open source implementation of cloud virtual machine power management, designed to help organizations save costs by automatically managing the power state of their cloud VMs. Inspired by commercial solutions like ParkMyCloud, Cloud Valet enables you to schedule, start, stop, and optimize your cloud infrastructure across multiple providers (Azure, AWS, GCP, Heroku, and more) — all with full transparency and control.
+
+With Cloud Valet, you can:
+- Automatically stop or start VMs based on schedules or policies
+- Reduce unnecessary cloud spend by parking idle resources
+- Manage users, groups, tags, and VM metadata
+- Integrate with your existing cloud accounts and workflows
+
+Cloud Valet is fully open source, extensible, and designed for teams who want to bring cloud cost optimization in-house.
 
 ## Features
 - FastAPI backend
