@@ -1,6 +1,6 @@
 # Cloud Valet FastAPI Scaffold
 
-[![CI](https://github.com/<your-username>/<your-repo>/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/<your-repo>/actions/workflows/ci.yml)
+[![CI](https://github.com/patilk234/cloud-valet/actions/workflows/ci.yml/badge.svg)](https://github.com/patilk234/cloud-valet/actions/workflows/ci.yml)
 
 ## Features
 - FastAPI backend
