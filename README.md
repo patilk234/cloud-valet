@@ -50,10 +50,10 @@ docker-compose up --build
 
 ```bash
 cd Cloud-Valet/app
-pip install -r ../requirements.txt
-pip install pytest pytest-asyncio httpx
+pip install -r requirements.txt
 pytest
 ```
+- The backend uses environment variables from `.env` (not committed). For CI, variables like `MOCK_AZURE` are set in `.github/workflows/ci.yml`.
 
 ### Frontend
 
@@ -62,8 +62,14 @@ cd cloud-valet-frontend
 npm install
 npm test
 ```
+- Frontend tests use a global setup file `src/setupTests.js` to mock `window.matchMedia` for Ant Design compatibility.
+- The project uses `@testing-library/jest-dom` for improved assertions.
 
 All tests are run automatically in CI on every pull request.
+
+## Environment Variables
+- Copy `.env.example` to `.env` in `Cloud-Valet/app` for local development.
+- For CI/CD, environment variables are set in the workflow YAML and not read from `.env`.
 
 ## Next Steps
 - Add API endpoints for user/group/tag/vm management

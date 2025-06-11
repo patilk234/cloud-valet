@@ -40,6 +40,9 @@ This guide will help you set up and run both the backend (FastAPI) and frontend 
      ```env
      DATABASE_URL=postgresql+asyncpg://<user>:<password>@localhost/<dbname>
      ```
+   - **Note:** `.env` is not committed to version control. You must create it locally from `.env.example`.
+   - For local development, set `MOCK_AZURE=1` in your `.env` if you want to mock Azure responses.
+   - For CI/CD (GitHub Actions), environment variables like `MOCK_AZURE` are set in the workflow YAML (see `.github/workflows/ci.yml`).
 
 5. **Initialize the database:**
    - The database tables will be created automatically on first run.
@@ -63,8 +66,14 @@ This guide will help you set up and run both the backend (FastAPI) and frontend 
    ```bash
    npm install
    ```
+   - Make sure you have internet access to fetch all dependencies.
+   - The project uses `@testing-library/jest-dom` for improved test assertions.
 
-3. **Start the frontend development server:**
+3. **Test environment setup:**
+   - The file `src/setupTests.js` globally mocks `window.matchMedia` for Ant Design compatibility in tests.
+   - No need to mock `window.matchMedia` in individual test files.
+
+4. **Start the frontend development server:**
    ```bash
    npm start
    ```
@@ -82,6 +91,8 @@ This guide will help you set up and run both the backend (FastAPI) and frontend 
 - **Frontend:**
   - Code is in `cloud-valet-frontend/src/`
   - Main entry: `App.js`
+  - To run tests: `npm test`
+  - Custom test setup: `src/setupTests.js` (for global mocks)
 - **Default Admin User:**
   - Username: `admin`
   - Password: `admin123`
