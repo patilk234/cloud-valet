@@ -1,9 +1,9 @@
 import React from 'react';
 import { Menu, Button } from 'antd';
-import { HomeOutlined, SettingOutlined } from '@ant-design/icons';
+import { HomeOutlined, SettingOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const Navbar = ({ onLogout, username }) => {
+const Navbar = ({ onLogout, username, darkMode, setDarkMode }) => {
   const navigate = useNavigate();
 
   return (
@@ -41,6 +41,15 @@ const Navbar = ({ onLogout, username }) => {
         ]}
       />
       <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{ marginRight: 16 }}>
+          <span
+            style={{ cursor: 'pointer', fontSize: 22 }}
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            onClick={() => setDarkMode(!darkMode)}
+          >
+            {darkMode ? <BulbFilled style={{ color: '#ffd700' }} /> : <BulbOutlined style={{ color: '#fff' }} />}
+          </span>
+        </span>
         {username && <span style={{ marginRight: 16, fontWeight: 500, color: 'white' }}>Hello, {username}</span>}
         <Button type="primary" onClick={onLogout} style={{ marginLeft: 8 }}>
           Logout

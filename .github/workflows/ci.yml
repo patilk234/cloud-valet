@@ -32,6 +32,7 @@ jobs:
           working-directory: Cloud-Valet/app
       - name: Start FastAPI server and run backend tests
         env:
+          MOCK_AZURE: 1
           DATABASE_URL: postgresql+asyncpg://cloudvalet:cloudvaletpass@localhost:55432/cloudvaletdb
         run: |
           uvicorn main:app --host 127.0.0.1 --port 8000 --reload &

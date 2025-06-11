@@ -9,7 +9,7 @@ const { Sider, Content } = Layout;
 
 const API_BASE = "http://localhost:8000";
 
-const Settings = ({ username }) => {
+const Settings = ({ username, permission, darkMode, setDarkMode }) => {
   const [selectedKey, setSelectedKey] = useState('users');
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);

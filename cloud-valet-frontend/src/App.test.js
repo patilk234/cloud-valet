@@ -1,20 +1,3 @@
-// Mock window.matchMedia for Ant Design (must be before any imports)
-if (!window.matchMedia) {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: jest.fn().mockImplementation(query => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: jest.fn(), // deprecated
-      removeListener: jest.fn(), // deprecated
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-    })),
-  });
-}
-
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -66,11 +49,9 @@ afterEach(() => {
 test('renders dashboard and shows username in navbar', async () => {
   window.history.pushState({}, '', '/dashboard');
   render(<App />);
+  // Look for the dashboard heading instead of a non-existent welcome message
   await waitFor(() => {
-    const matches = screen.getAllByText((content) =>
-      content.replace(/\s+/g, ' ').includes('Welcome to Cloud Valet Dashboard')
-    );
-    expect(matches.length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /Virtual Machines/i })).toBeInTheDocument();
   });
   await waitFor(() => expect(screen.getByText(/Hello, admin/i)).toBeInTheDocument());
   expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();

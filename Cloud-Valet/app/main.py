@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, Form, Cookie
+from fastapi import FastAPI, Depends, HTTPException, Request, Form, Cookie, Body
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -325,6 +325,8 @@ async def get_azure_provider(user: str = Cookie(None), db: AsyncSession = Depend
         "last_updated": secret.get("last_updated")
     }
 
+MOCK_MODE = os.environ.get("MOCK_AZURE", "0") == "1"
+
 @app.get("/azure/vms")
 async def list_azure_vms(user: str = Cookie(None), db: AsyncSession = Depends(get_db)):
     # Only admin can access
@@ -332,6 +334,36 @@ async def list_azure_vms(user: str = Cookie(None), db: AsyncSession = Depends(ge
     user_obj = result.scalar_one_or_none()
     if not user_obj or user_obj.permission != "Admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    if MOCK_MODE:
+        # Return mock data
+        return {
+            "vms": [
+                {
+                    "id": "/subscriptions/mock/resourceGroups/mock-group/providers/Microsoft.Compute/virtualMachines/mock-vm1",
+                    "name": "mock-vm1",
+                    "location": "eastus",
+                    "type": "Microsoft.Compute/virtualMachines",
+                    "resourceGroup": "mock-group",
+                    "status": "VM deallocated"
+                },
+                {
+                    "id": "/subscriptions/mock/resourceGroups/mock-group/providers/Microsoft.Compute/virtualMachines/mock-vm2",
+                    "name": "mock-vm2",
+                    "location": "westus",
+                    "type": "Microsoft.Compute/virtualMachines",
+                    "resourceGroup": "mock-group",
+                    "status": "VM running"
+                },
+                {
+                    "id": "/subscriptions/mock/resourceGroups/mock-group/providers/Microsoft.Compute/virtualMachines/mock-vm3",
+                    "name": "mock-vm3",
+                    "location": "centralus",
+                    "type": "Microsoft.Compute/virtualMachines",
+                    "resourceGroup": "mock-group",
+                    "status": "VM stopped"
+                }
+            ]
+        }
     secret = load_provider_secret()
     if not secret:
         raise HTTPException(status_code=400, detail="Azure credentials not set")
@@ -364,5 +396,58 @@ async def list_azure_vms(user: str = Cookie(None), db: AsyncSession = Depends(ge
                 "status": status or "Unknown"
             })
         return {"vms": vms}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Azure API error: {str(e)}")
+
+@app.post("/azure/vm/action")
+async def vm_action(
+    user: str = Cookie(None),
+    db: AsyncSession = Depends(get_db),
+    body: dict = Body(...)
+):
+    # Only admin can access
+    result = await db.execute(select(models.User).where(models.User.username == user))
+    user_obj = result.scalar_one_or_none()
+    if not user_obj or user_obj.permission != "Admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    if MOCK_MODE:
+        vm_name = body.get("name")
+        action = body.get("action")
+        return {"ok": True, "message": f"[MOCK] {action} performed on {vm_name}"}
+    secret = load_provider_secret()
+    if not secret:
+        raise HTTPException(status_code=400, detail="Azure credentials not set")
+    client_id = secret.get("clientId")
+    tenant_id = secret.get("tenantId")
+    client_secret = secret.get("clientSecret")
+    subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
+    if not all([client_id, tenant_id, client_secret, subscription_id]):
+        raise HTTPException(status_code=400, detail="Missing Azure credentials or subscription ID")
+    vm_name = body.get("name")
+    resource_group = body.get("resourceGroup")
+    action = body.get("action")
+    if not (vm_name and resource_group and action):
+        raise HTTPException(status_code=400, detail="Missing VM name, resource group, or action")
+    try:
+        credential = ClientSecretCredential(tenant_id=tenant_id, client_id=client_id, client_secret=client_secret)
+        compute_client = ComputeManagementClient(credential, subscription_id)
+        if action == "start":
+            poller = compute_client.virtual_machines.begin_start(resource_group, vm_name)
+            poller.wait()
+            return {"ok": True, "message": f"VM {vm_name} started"}
+        elif action == "deallocate":
+            poller = compute_client.virtual_machines.begin_deallocate(resource_group, vm_name)
+            poller.wait()
+            return {"ok": True, "message": f"VM {vm_name} deallocated"}
+        elif action == "poweroff":
+            poller = compute_client.virtual_machines.begin_power_off(resource_group, vm_name)
+            poller.wait()
+            return {"ok": True, "message": f"VM {vm_name} powered off"}
+        elif action == "restart":
+            poller = compute_client.virtual_machines.begin_restart(resource_group, vm_name)
+            poller.wait()
+            return {"ok": True, "message": f"VM {vm_name} restarted"}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Azure API error: {str(e)}")

@@ -7,10 +7,67 @@ body {
   background-color: #f0f2f5;
 }
 
+body.dark-theme {
+  background-color: #181818;
+  color: #fff;
+}
+
 /* Add hover effect for action icons if needed */
 .anticon[title] {
   transition: color 0.2s;
 }
 .anticon[title]:hover {
   color: #1890ff !important;
+}
+
+.dark-theme .ant-layout {
+  background: #181818 !important;
+}
+.dark-theme .ant-layout-sider {
+  background: #181818 !important;
+  border-right: 1px solid #222 !important;
+}
+.dark-theme .ant-menu,
+.dark-theme .ant-menu-item,
+.dark-theme .ant-menu-submenu-title {
+  background: #181818 !important;
+  color: #fff !important;
+}
+.dark-theme .ant-menu-item-selected {
+  background: #222 !important;
+  color: #ffd700 !important;
+}
+.dark-theme .ant-card {
+  background: #222 !important;
+  color: #fff !important;
+  border-color: #333 !important;
+}
+.dark-theme .ant-table {
+  background: #181818 !important;
+  color: #fff !important;
+}
+.dark-theme .ant-table-thead > tr > th {
+  background: #222 !important;
+  color: #ffd700 !important;
+}
+.dark-theme .ant-table-tbody > tr > td {
+  background: #181818 !important;
+  color: #fff !important;
+}
+.dark-theme .anticon[title]:hover {
+  color: #ffd700 !important;
+}
+.dark-theme .ant-alert {
+  background: #222 !important;
+  color: #fff !important;
+  border-color: #333 !important;
+}
+.dark-theme .ant-spin-dot-item {
+  background-color: #ffd700 !important;
+}
+.dark-theme .ant-switch-checked {
+  background: #ffd700 !important;
+}
+.dark-theme .ant-switch {
+  background: #333 !important;
 }

@@ -9,6 +9,16 @@ import 'antd/dist/reset.css';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Persist dark mode in localStorage
+    const stored = localStorage.getItem('cloudvalet-darkmode');
+    return stored === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('cloudvalet-darkmode', darkMode);
+    document.body.classList.toggle('dark-theme', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     async function fetchUser() {
@@ -37,12 +47,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <Dashboard username={user?.username} permission={user?.permission} />
+            <Dashboard username={user?.username} permission={user?.permission} darkMode={darkMode} setDarkMode={setDarkMode} />
           </ProtectedRoute>
         } />
         <Route path="/settings" element={
           <ProtectedRoute>
-            <Settings username={user?.username} permission={user?.permission} />
+            <Settings username={user?.username} permission={user?.permission} darkMode={darkMode} setDarkMode={setDarkMode} />
           </ProtectedRoute>
         } />
         <Route path="/" element={<Navigate to="/login" />} />
