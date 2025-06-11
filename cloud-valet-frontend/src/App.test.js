@@ -16,10 +16,12 @@ if (!window.matchMedia) {
 }
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import Settings from './Settings';
 import '@testing-library/jest-dom/extend-expect';
+import { MemoryRouter } from 'react-router-dom';
 
 // Mock fetch for /users/me and other endpoints
 beforeEach(() => {
@@ -39,6 +41,13 @@ beforeEach(() => {
           { username: 'admin', email: 'admin@x.com', permission: 'Admin' },
           { username: 'testuser', email: 'test@x.com', permission: 'Write' }
         ])
+      });
+    }
+    // /provider/azure (GET)
+    if (url.includes('/provider/azure') && (!opts.method || opts.method === 'GET')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ clientId: 'abc', tenantId: 'def', last_updated: '2025-06-11T12:00:00Z' })
       });
     }
     // /logout (GET)
@@ -81,4 +90,39 @@ test('redirects to login if not authenticated', async () => {
   window.history.pushState({}, '', '/dashboard');
   render(<App />);
   await waitFor(() => expect(screen.queryByText(/Cloud Valet Dashboard/i)).not.toBeInTheDocument());
+});
+
+describe('Provider credentials form', () => {
+  it('fetches provider info and does not display clientSecret', async () => {
+    render(
+      <MemoryRouter>
+        <Settings username="admin" />
+      </MemoryRouter>
+    );
+    // Wait for Provider menu to appear, then click
+    await waitFor(() => expect(screen.getByText('Provider')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Provider'));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/provider/azure'),
+      expect.objectContaining({ credentials: 'include' })
+    ));
+    expect(screen.getByDisplayValue('abc')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('def')).toBeInTheDocument();
+    // clientSecret field should be empty
+    expect(screen.getByLabelText(/Client Secret/i).value).toBe('');
+  });
+
+  it('shows Save and Edit button logic', async () => {
+    render(
+      <MemoryRouter>
+        <Settings username="admin" />
+      </MemoryRouter>
+    );
+    // Wait for Provider menu to appear, then click
+    await waitFor(() => expect(screen.getByText('Provider')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Provider'));
+    await waitFor(() => screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Edit'));
+    expect(screen.getByText('Save')).toBeInTheDocument();
+  });
 });

@@ -1,7 +1,16 @@
 import pytest
 import httpx
+import os
+import json
 
 BASE_URL = "http://localhost:8000"
+
+def get_admin_cookies():
+    # This assumes admin login is possible via /login
+    with httpx.Client(base_url="http://127.0.0.1:8000") as c:
+        resp = c.post("/login", data={"username": "admin", "password": "admin123"})
+        cookies = dict(resp.cookies)
+    return cookies
 
 @pytest.mark.asyncio
 async def test_root():
@@ -128,3 +137,44 @@ async def test_vm_crud():
         r = await ac.get("/vms/", cookies={"user": cookie})
         assert r.status_code == 200
         assert any(v["name"] == "testvm" for v in r.json())
+
+def test_provider_get_no_secret():
+    cookies = get_admin_cookies()
+    r = httpx.get("http://127.0.0.1:8000/provider/azure", cookies=cookies)
+    assert r.status_code == 200
+    data = r.json()
+    assert "clientSecret" not in data
+    assert "clientId" in data and "tenantId" in data
+
+def test_provider_post_and_last_updated():
+    cookies = get_admin_cookies()
+    payload = {
+        "client_id": "test-client-id",
+        "tenant_id": "test-tenant-id",
+        "client_secret": "test-secret"
+    }
+    r = httpx.post("http://127.0.0.1:8000/provider/azure", data=payload, cookies=cookies)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is True
+    assert "last_updated" in data
+    # Now GET should return last_updated and not clientSecret
+    r2 = httpx.get("http://127.0.0.1:8000/provider/azure", cookies=cookies)
+    data2 = r2.json()
+    assert "last_updated" in data2
+    assert data2["clientId"] == "test-client-id"
+    assert data2["tenantId"] == "test-tenant-id"
+    assert "clientSecret" not in data2
+
+def test_provider_admin_only():
+    # No cookie
+    r = httpx.get("http://127.0.0.1:8000/provider/azure")
+    assert r.status_code == 403 or r.status_code == 401
+    # Non-admin user
+    # Create user if needed
+    with httpx.Client(base_url="http://127.0.0.1:8000") as c:
+        c.post("/users/", data={"username": "testuser", "email": "t@t.com", "password": "pw", "permission": "Read"})
+        resp = c.post("/login", data={"username": "testuser", "password": "pw"})
+        cookies = dict(resp.cookies)
+        r2 = c.get("/provider/azure", cookies=cookies)
+        assert r2.status_code == 403

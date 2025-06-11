@@ -7,7 +7,6 @@ import AddUserModal from './AddUserModal';
 
 const { Sider, Content } = Layout;
 
-// Set your backend API base URL here
 const API_BASE = "http://localhost:8000";
 
 const Settings = ({ username }) => {
@@ -23,6 +22,13 @@ const Settings = ({ username }) => {
   const [permissionSearch, setPermissionSearch] = useState('');
   const [permissionPage, setPermissionPage] = useState(1);
   const [userPermission, setUserPermission] = useState(null);
+  const [providerForm, setProviderForm] = useState({
+    clientId: '',
+    tenantId: '',
+    clientSecret: ''
+  });
+  const [providerSaved, setProviderSaved] = useState(false);
+  const [providerEditMode, setProviderEditMode] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -100,7 +106,54 @@ const Settings = ({ username }) => {
       }
     };
     fetchCurrentUser();
+
+    // Fetch provider info from backend
+    const fetchProvider = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/provider/azure`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.clientId || data.tenantId || data.clientSecret) {
+            setProviderForm(data);
+            setProviderSaved(true);
+            setProviderEditMode(false); // ensure not in edit mode after fetch
+          }
+        }
+      } catch {}
+    };
+    fetchProvider();
   }, []);
+
+  function handleProviderChange(e) {
+    setProviderForm({ ...providerForm, [e.target.name]: e.target.value });
+  }
+  async function handleProviderSave() {
+    const formData = new FormData();
+    formData.append('client_id', providerForm.clientId);
+    formData.append('tenant_id', providerForm.tenantId);
+    formData.append('client_secret', providerForm.clientSecret);
+    try {
+      const res = await fetch(`${API_BASE}/provider/azure`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      if (res.ok) {
+        setProviderSaved(true);
+        setProviderEditMode(false);
+        message.success('Azure App Credentials saved securely!');
+      } else {
+        message.error('Failed to save credentials');
+      }
+    } catch {
+      message.error('Failed to save credentials');
+    }
+  }
+  function handleProviderEdit() {
+    setProviderSaved(false);
+    setProviderEditMode(true); // Enable editing when Edit is clicked
+    setProviderForm({ ...providerForm }); // force re-render if needed
+  }
 
   return (
     <div>
@@ -113,8 +166,11 @@ const Settings = ({ username }) => {
             style={{ height: '100%', borderRight: 0 }}
             onClick={({ key }) => setSelectedKey(key)}
             items={[
-              { key: 'users', label: 'Users' },
-              { key: 'permissions', label: 'Permissions' },
+              ...(userPermission === 'Admin' ? [
+                { key: 'users', label: 'Users' },
+                { key: 'permissions', label: 'Permissions' },
+                { key: 'provider', label: 'Provider' },
+              ] : []),
               { key: 'about', label: 'About Us' },
             ]}
           />
@@ -207,6 +263,64 @@ const Settings = ({ username }) => {
                   Not enough permissions to view this section.
                 </div>
               )
+            )}
+            {selectedKey === 'provider' && userPermission === 'Admin' && (
+              <div>
+                <h2>Provider</h2>
+                <div style={{ padding: 24, background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', maxWidth: 480 }}>
+                  <h3>Azure App Credentials</h3>
+                  <div
+                    autoComplete="off"
+                  >
+                    <div style={{ marginBottom: 16 }}>
+                      <label><b>Application (client) ID</b></label>
+                      <input
+                        type="text"
+                        name="clientId"
+                        value={providerForm.clientId}
+                        onChange={handleProviderChange}
+                        disabled={!providerEditMode}
+                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
+                        required
+                      />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label><b>Directory (tenant) ID</b></label>
+                      <input
+                        type="text"
+                        name="tenantId"
+                        value={providerForm.tenantId}
+                        onChange={handleProviderChange}
+                        disabled={!providerEditMode}
+                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
+                        required
+                      />
+                    </div>
+                    <div style={{ marginBottom: 24 }}>
+                      <label htmlFor="clientSecret"><b>Client Secret</b></label>
+                      <input
+                        id="clientSecret"
+                        type="password"
+                        name="clientSecret"
+                        value={providerForm.clientSecret}
+                        onChange={handleProviderChange}
+                        disabled={!providerEditMode}
+                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
+                        required
+                      />
+                    </div>
+                    {!providerSaved ? (
+                      <button type="button" onClick={handleProviderSave} style={{ width: '100%', padding: 10, background: '#1677ff', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600 }}>
+                        Save
+                      </button>
+                    ) : (
+                      <button type="button" onClick={handleProviderEdit} style={{ width: '100%', padding: 10, background: '#faad14', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600 }}>
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
             {selectedKey === 'about' && (
               <div>

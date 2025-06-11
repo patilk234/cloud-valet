@@ -8,6 +8,8 @@ from sqlalchemy.future import select
 from starlette.status import HTTP_302_FOUND
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
+from cryptography.fernet import Fernet
+import os, json, datetime
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -234,3 +236,86 @@ async def logout():
     response = RedirectResponse(url="/login", status_code=HTTP_302_FOUND)
     response.delete_cookie(key="user")
     return response
+
+PROVIDER_SECRET_FILE = "azure_provider_secret.json"
+PROVIDER_SECRET_META_FILE = "azure_provider_secret_meta.json"
+FERNET_KEY_FILE = "fernet.key"
+
+def get_fernet():
+    if not os.path.exists(FERNET_KEY_FILE):
+        key = Fernet.generate_key()
+        with open(FERNET_KEY_FILE, "wb") as f:
+            f.write(key)
+    else:
+        with open(FERNET_KEY_FILE, "rb") as f:
+            key = f.read()
+    return Fernet(key)
+
+def save_provider_secret(data):
+    f = get_fernet()
+    encrypted = f.encrypt(json.dumps(data).encode())
+    with open(PROVIDER_SECRET_FILE, "wb") as out:
+        out.write(encrypted)
+    # Save/update last_updated timestamp
+    meta = {"last_updated": datetime.datetime.utcnow().isoformat() + "Z"}
+    with open(PROVIDER_SECRET_META_FILE, "w") as meta_out:
+        json.dump(meta, meta_out)
+
+def load_provider_secret():
+    if not os.path.exists(PROVIDER_SECRET_FILE):
+        return None
+    f = get_fernet()
+    with open(PROVIDER_SECRET_FILE, "rb") as inp:
+        encrypted = inp.read()
+    try:
+        decrypted = f.decrypt(encrypted)
+        data = json.loads(decrypted.decode())
+        # Attach last_updated if available
+        if os.path.exists(PROVIDER_SECRET_META_FILE):
+            with open(PROVIDER_SECRET_META_FILE, "r") as meta_in:
+                meta = json.load(meta_in)
+                data["last_updated"] = meta.get("last_updated")
+        return data
+    except Exception:
+        return None
+
+from fastapi import status
+
+@app.post("/provider/azure")
+async def save_azure_provider(
+    client_id: str = Form(...),
+    tenant_id: str = Form(...),
+    client_secret: str = Form(...),
+    user: str = Cookie(None),
+    db: AsyncSession = Depends(get_db)
+):
+    # Only admin can save
+    result = await db.execute(select(models.User).where(models.User.username == user))
+    user_obj = result.scalar_one_or_none()
+    if not user_obj or user_obj.permission != "Admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    save_provider_secret({
+        "clientId": client_id,
+        "tenantId": tenant_id,
+        "clientSecret": client_secret
+    })
+    # Return last_updated timestamp
+    meta = {"last_updated": datetime.datetime.utcnow().isoformat() + "Z"}
+    return {"ok": True, **meta}
+
+@app.get("/provider/azure")
+async def get_azure_provider(user: str = Cookie(None), db: AsyncSession = Depends(get_db)):
+    # Only admin can get
+    result = await db.execute(select(models.User).where(models.User.username == user))
+    user_obj = result.scalar_one_or_none()
+    if not user_obj or user_obj.permission != "Admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    secret = load_provider_secret()
+    if not secret:
+        return {"clientId": "", "tenantId": "", "last_updated": None}
+    # Never return clientSecret in GET
+    return {
+        "clientId": secret.get("clientId", ""),
+        "tenantId": secret.get("tenantId", ""),
+        "last_updated": secret.get("last_updated")
+    }
