@@ -10,6 +10,11 @@ venv*/
 .venv/
 .env
 
+#misc
+azure_provider_secret_meta.json
+azure_provider_secret.json
+fernet.key
+
 #ACT
 .actrc
 
