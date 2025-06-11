@@ -6,3 +6,11 @@ body {
     sans-serif;
   background-color: #f0f2f5;
 }
+
+/* Add hover effect for action icons if needed */
+.anticon[title] {
+  transition: color 0.2s;
+}
+.anticon[title]:hover {
+  color: #1890ff !important;
+}

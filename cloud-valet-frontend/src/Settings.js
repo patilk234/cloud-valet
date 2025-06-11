@@ -308,6 +308,12 @@ const Settings = ({ username }) => {
                         style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
                         required
                       />
+                      {/* UI hint for client secret status */}
+                      <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
+                        {providerSaved && !providerEditMode
+                          ? 'Client secret is set.'
+                          : 'Enter to update client secret.'}
+                      </div>
                     </div>
                     {!providerSaved ? (
                       <button type="button" onClick={handleProviderSave} style={{ width: '100%', padding: 10, background: '#1677ff', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600 }}>

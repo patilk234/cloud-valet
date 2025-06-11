@@ -11,3 +11,5 @@ httpx
 pytest
 python-multipart
 cryptography
+azure-identity
+azure-mgmt-compute

@@ -10,6 +10,9 @@ from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
 import os, json, datetime
+from dotenv import load_dotenv
+from azure.identity import ClientSecretCredential
+from azure.mgmt.compute import ComputeManagementClient
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -22,6 +25,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+load_dotenv()  # Load .env file at startup
 
 @app.on_event("startup")
 async def startup():
@@ -319,3 +324,45 @@ async def get_azure_provider(user: str = Cookie(None), db: AsyncSession = Depend
         "tenantId": secret.get("tenantId", ""),
         "last_updated": secret.get("last_updated")
     }
+
+@app.get("/azure/vms")
+async def list_azure_vms(user: str = Cookie(None), db: AsyncSession = Depends(get_db)):
+    # Only admin can access
+    result = await db.execute(select(models.User).where(models.User.username == user))
+    user_obj = result.scalar_one_or_none()
+    if not user_obj or user_obj.permission != "Admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    secret = load_provider_secret()
+    if not secret:
+        raise HTTPException(status_code=400, detail="Azure credentials not set")
+    client_id = secret.get("clientId")
+    tenant_id = secret.get("tenantId")
+    client_secret = secret.get("clientSecret")
+    subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
+    if not all([client_id, tenant_id, client_secret, subscription_id]):
+        raise HTTPException(status_code=400, detail="Missing Azure credentials or subscription ID")
+    try:
+        credential = ClientSecretCredential(tenant_id=tenant_id, client_id=client_id, client_secret=client_secret)
+        compute_client = ComputeManagementClient(credential, subscription_id)
+        vms = []
+        for vm in compute_client.virtual_machines.list_all():
+            # Get resource group from ID
+            resource_group = vm.id.split("/")[4] if vm.id else ""
+            # Get power state (status)
+            instance_view = compute_client.virtual_machines.instance_view(resource_group, vm.name)
+            status = None
+            for s in instance_view.statuses:
+                if s.code.startswith("PowerState/"):
+                    status = s.display_status
+                    break
+            vms.append({
+                "id": vm.id,
+                "name": vm.name,
+                "location": vm.location,
+                "type": vm.type,
+                "resourceGroup": resource_group,
+                "status": status or "Unknown"
+            })
+        return {"vms": vms}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Azure API error: {str(e)}")
