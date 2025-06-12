@@ -71,3 +71,22 @@ body.dark-theme {
 .dark-theme .ant-switch {
   background: #333 !important;
 }
+
+/* Notification panel dark mode support */
+.dark-theme .notification-panel {
+  background: #222 !important;
+  color: #fff !important;
+  box-shadow: -2px 0 16px rgba(0,0,0,0.25) !important;
+}
+.dark-theme .notification-panel .ant-btn-dangerous {
+  background: #333 !important;
+  color: #ffd700 !important;
+  border-color: #444 !important;
+}
+.dark-theme .notification-panel .ant-btn-dangerous:hover {
+  background: #444 !important;
+  color: #fff !important;
+}
+.dark-theme .notification-panel .anticon-close {
+  color: #ffd700 !important;
+}

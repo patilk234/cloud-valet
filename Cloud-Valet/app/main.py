@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, Cookie, Body
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import engine, Base, SessionLocal
@@ -13,6 +13,7 @@ import os, json, datetime
 from dotenv import load_dotenv
 from azure.identity import ClientSecretCredential
 from azure.mgmt.compute import ComputeManagementClient
+import asyncio
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -332,7 +333,7 @@ async def save_azure_provider(
 
 @app.get("/provider/azure")
 async def get_azure_provider(user: str = Cookie(None), db: AsyncSession = Depends(get_db)):
-    # Only admin can get
+    # Only admin can get provider info (even without secret)
     result = await db.execute(select(models.User).where(models.User.username == user))
     user_obj = result.scalar_one_or_none()
     if not user_obj or user_obj.permission != "Admin":
@@ -351,11 +352,11 @@ MOCK_MODE = os.environ.get("MOCK_AZURE", "0") == "1"
 
 @app.get("/azure/vms")
 async def list_azure_vms(user: str = Cookie(None), db: AsyncSession = Depends(get_db)):
-    # Only admin can access
+    # Allow all authenticated users to view VMs
     result = await db.execute(select(models.User).where(models.User.username == user))
     user_obj = result.scalar_one_or_none()
-    if not user_obj or user_obj.permission != "Admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    if not user_obj:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if MOCK_MODE:
         # Return mock data
         return {
@@ -425,16 +426,25 @@ async def list_azure_vms(user: str = Cookie(None), db: AsyncSession = Depends(ge
 async def vm_action(
     user: str = Cookie(None),
     db: AsyncSession = Depends(get_db),
-    body: dict = Body(...)
+    body: dict = Body(None)
 ):
-    # Only admin can access
+    # Always check permission first, even if body is missing
     result = await db.execute(select(models.User).where(models.User.username == user))
     user_obj = result.scalar_one_or_none()
-    if not user_obj or user_obj.permission != "Admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    perm = (user_obj.permission if user_obj else None) or "Read"
+    if not user_obj or perm not in ("Write", "Admin"):
+        # Defensive: always return 403 in MOCK_MODE, never raise any other error
+        if MOCK_MODE:
+            return JSONResponse(status_code=403, content={"detail": "Write or Admin only [MOCK]"})
+        raise HTTPException(status_code=403, detail="Write or Admin only")
+    if not body:
+        raise HTTPException(status_code=400, detail="Missing request body")
+    vm_name = body.get("name")
+    resource_group = body.get("resourceGroup")
+    action = body.get("action")
+    if not (vm_name and resource_group and action):
+        raise HTTPException(status_code=400, detail="Missing VM name, resource group, or action")
     if MOCK_MODE:
-        vm_name = body.get("name")
-        action = body.get("action")
         return {"ok": True, "message": f"[MOCK] {action} performed on {vm_name}"}
     secret = load_provider_secret()
     if not secret:
@@ -445,31 +455,121 @@ async def vm_action(
     subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
     if not all([client_id, tenant_id, client_secret, subscription_id]):
         raise HTTPException(status_code=400, detail="Missing Azure credentials or subscription ID")
-    vm_name = body.get("name")
-    resource_group = body.get("resourceGroup")
-    action = body.get("action")
-    if not (vm_name and resource_group and action):
-        raise HTTPException(status_code=400, detail="Missing VM name, resource group, or action")
     try:
         credential = ClientSecretCredential(tenant_id=tenant_id, client_id=client_id, client_secret=client_secret)
         compute_client = ComputeManagementClient(credential, subscription_id)
         if action == "start":
             poller = compute_client.virtual_machines.begin_start(resource_group, vm_name)
             poller.wait()
-            return {"ok": True, "message": f"VM {vm_name} started"}
         elif action == "deallocate":
             poller = compute_client.virtual_machines.begin_deallocate(resource_group, vm_name)
             poller.wait()
-            return {"ok": True, "message": f"VM {vm_name} deallocated"}
         elif action == "poweroff":
             poller = compute_client.virtual_machines.begin_power_off(resource_group, vm_name)
             poller.wait()
-            return {"ok": True, "message": f"VM {vm_name} powered off"}
         elif action == "restart":
             poller = compute_client.virtual_machines.begin_restart(resource_group, vm_name)
             poller.wait()
-            return {"ok": True, "message": f"VM {vm_name} restarted"}
         else:
             raise HTTPException(status_code=400, detail="Invalid action")
+        # After action, fetch updated VM info
+        vm = compute_client.virtual_machines.get(resource_group, vm_name)
+        instance_view = compute_client.virtual_machines.instance_view(resource_group, vm_name)
+        statuses = instance_view.statuses if hasattr(instance_view, 'statuses') else []
+        status = next((s.display_status for s in statuses if s.code.startswith('PowerState')), 'Unknown')
+        vm_data = {
+            'name': vm.name,
+            'resourceGroup': resource_group,
+            'location': vm.location,
+            'status': status,
+        }
+        return vm_data
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Azure API error: {str(e)}")
+
+@app.post("/azure/vms/bulk_action")
+async def vms_bulk_action(
+    user: str = Cookie(None),
+    db: AsyncSession = Depends(get_db),
+    body: dict = Body(...)
+):
+    # Allow Write and Admin users to perform actions
+    result = await db.execute(select(models.User).where(models.User.username == user))
+    user_obj = result.scalar_one_or_none()
+    perm = (user_obj.permission if user_obj else None) or "Read"
+    if not user_obj or perm not in ("Write", "Admin"):
+        # If MOCK_MODE, always return a mock 403 for forbidden users
+        if MOCK_MODE:
+            return JSONResponse(status_code=403, content={"detail": "Write or Admin only [MOCK]"})
+        raise HTTPException(status_code=403, detail="Write or Admin only")
+    if MOCK_MODE:
+        names = body.get("names", [])
+        action = body.get("action")
+        return [
+            {"name": name, "resourceGroup": "mock-rg", "location": "mock-loc", "status": f"[MOCK] {action}"}
+            for name in names
+        ]
+    secret = load_provider_secret()
+    if not secret:
+        raise HTTPException(status_code=400, detail="Azure credentials not set")
+    client_id = secret.get("clientId")
+    tenant_id = secret.get("tenantId")
+    client_secret = secret.get("clientSecret")
+    subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
+    if not all([client_id, tenant_id, client_secret, subscription_id]):
+        raise HTTPException(status_code=400, detail="Missing Azure credentials or subscription ID")
+    vms = body.get("vms", [])
+    action = body.get("action")
+    if not vms or not action:
+        raise HTTPException(status_code=400, detail="Missing VMs or action")
+    credential = ClientSecretCredential(tenant_id=tenant_id, client_id=client_id, client_secret=client_secret)
+    compute_client = ComputeManagementClient(credential, subscription_id)
+    # Run all VM actions in parallel
+    async def operate_vm(vm):
+        name = vm.get("name")
+        resource_group = vm.get("resourceGroup")
+        if not (name and resource_group):
+            return {
+                'name': name,
+                'resourceGroup': resource_group,
+                'location': '',
+                'status': 'Error: Missing name or resource group',
+            }
+        try:
+            loop = asyncio.get_event_loop()
+            if action == "start":
+                await loop.run_in_executor(None, lambda: compute_client.virtual_machines.begin_start(resource_group, name).wait())
+            elif action == "deallocate":
+                await loop.run_in_executor(None, lambda: compute_client.virtual_machines.begin_deallocate(resource_group, name).wait())
+            elif action == "poweroff":
+                await loop.run_in_executor(None, lambda: compute_client.virtual_machines.begin_power_off(resource_group, name).wait())
+            elif action == "restart":
+                await loop.run_in_executor(None, lambda: compute_client.virtual_machines.begin_restart(resource_group, name).wait())
+            else:
+                return {
+                    'name': name,
+                    'resourceGroup': resource_group,
+                    'location': '',
+                    'status': 'Error: Invalid action',
+                }
+            vm_obj = compute_client.virtual_machines.get(resource_group, name)
+            instance_view = compute_client.virtual_machines.instance_view(resource_group, name)
+            statuses = instance_view.statuses if hasattr(instance_view, 'statuses') else []
+            status = next((s.display_status for s in statuses if s.code.startswith('PowerState')), 'Unknown')
+            return {
+                'name': vm_obj.name,
+                'resourceGroup': resource_group,
+                'location': vm_obj.location,
+                'status': status,
+            }
+        except Exception as e:
+            return {
+                'name': name,
+                'resourceGroup': resource_group,
+                'location': '',
+                'status': f'Error: {str(e)}',
+            }
+    results = await asyncio.gather(*(operate_vm(vm) for vm in vms))
+    return results

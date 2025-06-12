@@ -1,11 +1,10 @@
 import React from 'react';
 import { Menu, Button } from 'antd';
-import { HomeOutlined, SettingOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
+import { HomeOutlined, SettingOutlined, BulbOutlined, BulbFilled, BellOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const Navbar = ({ onLogout, username, darkMode, setDarkMode }) => {
+const Navbar = ({ onLogout, username, darkMode, setDarkMode, onShowNotifications, notificationCount }) => {
   const navigate = useNavigate();
-
   return (
     <div style={{
       display: 'flex',
@@ -41,8 +40,19 @@ const Navbar = ({ onLogout, username, darkMode, setDarkMode }) => {
         ]}
       />
       <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{ marginRight: 16, position: 'relative' }}>
+          <BellOutlined
+            style={{ cursor: 'pointer', fontSize: 22, color: '#fff' }}
+            title="Notifications"
+            onClick={onShowNotifications}
+          />
+          {notificationCount > 0 && (
+            <span style={{ position: 'absolute', top: -4, right: -4, background: '#ff4d4f', color: '#fff', borderRadius: '50%', fontSize: 12, padding: '0 6px', minWidth: 18, textAlign: 'center', fontWeight: 'bold' }}>{notificationCount}</span>
+          )}
+        </span>
         <span style={{ marginRight: 16 }}>
           <span
+            data-testid="dark-mode-toggle"
             style={{ cursor: 'pointer', fontSize: 22 }}
             title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             onClick={() => setDarkMode(!darkMode)}
@@ -50,7 +60,7 @@ const Navbar = ({ onLogout, username, darkMode, setDarkMode }) => {
             {darkMode ? <BulbFilled style={{ color: '#ffd700' }} /> : <BulbOutlined style={{ color: '#fff' }} />}
           </span>
         </span>
-        {username && <span style={{ marginRight: 16, fontWeight: 500, color: 'white' }}>Hello, {username}</span>}
+        <span style={{ marginRight: 16, fontWeight: 500, color: 'white' }}>Hello, {username}</span>
         <Button type="primary" onClick={onLogout} style={{ marginLeft: 8 }}>
           Logout
         </Button>
