@@ -9,7 +9,7 @@ const { Sider, Content } = Layout;
 
 const API_BASE = "http://localhost:8000";
 
-const Settings = ({ username, permission, darkMode, setDarkMode }) => {
+const Settings = ({ username, permission, darkMode, setDarkMode = () => {} }) => {
   const [selectedKey, setSelectedKey] = useState('users');
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -29,6 +29,10 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
   });
   const [providerSaved, setProviderSaved] = useState(false);
   const [providerEditMode, setProviderEditMode] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -122,7 +126,14 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
       } catch {}
     };
     fetchProvider();
-  }, []);
+
+    // Fetch email for profile
+    if (username) {
+      fetch(`/users/${username}`)
+        .then(res => res.json())
+        .then(data => setUserEmail(data.email || ''));
+    }
+  }, [username]);
 
   function handleProviderChange(e) {
     setProviderForm({ ...providerForm, [e.target.name]: e.target.value });
@@ -155,33 +166,58 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
     setProviderForm({ ...providerForm }); // force re-render if needed
   }
 
+  const handlePasswordUpdate = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      message.error('Please fill all password fields');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      message.error('New passwords do not match');
+      return;
+    }
+    const res = await fetch(`/users/${username}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      credentials: 'include',
+    });
+    if (res.ok) {
+      message.success('Password updated successfully');
+      setOldPassword(''); setNewPassword(''); setConfirmPassword('');
+    } else {
+      const data = await res.json();
+      message.error(data.detail || 'Failed to update password');
+    }
+  };
+
   return (
     <div>
-      <Navbar onLogout={handleLogout} username={username} />
-      <Layout style={{ minHeight: '100vh' }}>
-        <Sider width={240} style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}>
+      <Navbar onLogout={handleLogout} username={username} darkMode={darkMode} setDarkMode={setDarkMode} />
+      <Layout style={{ minHeight: '100vh', background: darkMode ? '#181818' : '#fff' }}>
+        <Sider width={240} style={{ background: darkMode ? '#181818' : '#fff', borderRight: darkMode ? '1px solid #222' : '1px solid #f0f0f0' }}>
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
-            style={{ height: '100%', borderRight: 0 }}
+            style={{ height: '100%', borderRight: 0, background: darkMode ? '#181818' : '#fff', color: darkMode ? '#fff' : undefined }}
             onClick={({ key }) => setSelectedKey(key)}
             items={[
               ...(userPermission === 'Admin' ? [
-                { key: 'users', label: 'Users' },
-                { key: 'permissions', label: 'Permissions' },
-                { key: 'provider', label: 'Provider' },
+                { key: 'users', label: <span style={{ color: darkMode ? '#fff' : undefined }}>Users</span> },
+                { key: 'permissions', label: <span style={{ color: darkMode ? '#fff' : undefined }}>Permissions</span> },
+                { key: 'provider', label: <span style={{ color: darkMode ? '#fff' : undefined }}>Provider</span> },
               ] : []),
-              { key: 'about', label: 'About Us' },
+              { key: 'profile', label: <span style={{ color: darkMode ? '#fff' : undefined }}>Profile</span> },
+              { key: 'about', label: <span style={{ color: darkMode ? '#fff' : undefined }}>About Us</span> },
             ]}
           />
         </Sider>
-        <Layout style={{ background: '#fff' }}>
-          <Content style={{ margin: 24, minHeight: 280 }}>
+        <Layout style={{ background: darkMode ? '#181818' : '#fff' }}>
+          <Content style={{ margin: 24, minHeight: 280, color: darkMode ? '#fff' : undefined }}>
             {selectedKey === 'users' && (
               userPermission === 'Admin' ? (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2>Users</h2>
+                    <h2 style={{ color: darkMode ? '#fff' : undefined }}>Users</h2>
                     <Button type="primary" onClick={() => setAddUserOpen(true)}>
                       Add User
                     </Button>
@@ -198,7 +234,7 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
             {selectedKey === 'permissions' && (
               userPermission === 'Admin' ? (
                 <div>
-                  <h2 style={{ margin: 0, marginBottom: 8 }}>Permissions</h2>
+                  <h2 style={{ margin: 0, marginBottom: 8, color: darkMode ? '#fff' : undefined }}>Permissions</h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
                     <Button type={selectedPermission === 'Read' ? 'primary' : 'default'} onClick={() => fetchUsersByPermission('Read')}>Read</Button>
                     <Button type={selectedPermission === 'Write' ? 'primary' : 'default'} onClick={() => fetchUsersByPermission('Write')}>Write</Button>
@@ -209,7 +245,7 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
                   </div>
                   {selectedPermission && (
                     <div>
-                      <h3>Users with {selectedPermission} Permission</h3>
+                      <h3 style={{ color: darkMode ? '#fff' : undefined }}>Users with {selectedPermission} Permission</h3>
                       <input
                         type="text"
                         placeholder="Search users by name or email"
@@ -218,7 +254,7 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
                           setPermissionSearch(e.target.value);
                           setPermissionPage(1); // Reset to first page on search
                         }}
-                        style={{ marginBottom: 16, width: 320, padding: 8, borderRadius: 4, border: '1px solid #d9d9d9' }}
+                        style={{ marginBottom: 16, width: 320, padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined }}
                       />
                       <List
                         itemLayout="horizontal"
@@ -233,7 +269,7 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
                           <List.Item>
                             <List.Item.Meta
                               avatar={<Avatar style={{ backgroundColor: '#1890ff', verticalAlign: 'middle' }}>{u.username[0]?.toUpperCase()}</Avatar>}
-                              title={<span style={{ fontWeight: 500 }}>{u.username}</span>}
+                              title={<span style={{ fontWeight: 500, color: darkMode ? '#fff' : undefined }}>{u.username}</span>}
                               description={<span style={{ color: '#888' }}>{u.email}</span>}
                             />
                           </List.Item>
@@ -266,38 +302,38 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
             )}
             {selectedKey === 'provider' && userPermission === 'Admin' && (
               <div>
-                <h2>Provider</h2>
+                <h2 style={{ color: darkMode ? '#fff' : undefined }}>Provider</h2>
                 <div style={{ padding: 24, background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', maxWidth: 480 }}>
-                  <h3>Azure App Credentials</h3>
+                  <h3 style={{ color: darkMode ? '#fff' : undefined }}>Azure App Credentials</h3>
                   <div
                     autoComplete="off"
                   >
                     <div style={{ marginBottom: 16 }}>
-                      <label><b>Application (client) ID</b></label>
+                      <label style={{ color: darkMode ? '#fff' : undefined }}><b>Application (client) ID</b></label>
                       <input
                         type="text"
                         name="clientId"
                         value={providerForm.clientId}
                         onChange={handleProviderChange}
                         disabled={!providerEditMode}
-                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
+                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4, background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined }}
                         required
                       />
                     </div>
                     <div style={{ marginBottom: 16 }}>
-                      <label><b>Directory (tenant) ID</b></label>
+                      <label style={{ color: darkMode ? '#fff' : undefined }}><b>Directory (tenant) ID</b></label>
                       <input
                         type="text"
                         name="tenantId"
                         value={providerForm.tenantId}
                         onChange={handleProviderChange}
                         disabled={!providerEditMode}
-                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
+                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4, background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined }}
                         required
                       />
                     </div>
                     <div style={{ marginBottom: 24 }}>
-                      <label htmlFor="clientSecret"><b>Client Secret</b></label>
+                      <label htmlFor="clientSecret" style={{ color: darkMode ? '#fff' : undefined }}><b>Client Secret</b></label>
                       <input
                         id="clientSecret"
                         type="password"
@@ -305,7 +341,7 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
                         value={providerForm.clientSecret}
                         onChange={handleProviderChange}
                         disabled={!providerEditMode}
-                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4 }}
+                        style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', marginTop: 4, background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined }}
                         required
                       />
                       {/* UI hint for client secret status */}
@@ -328,10 +364,36 @@ const Settings = ({ username, permission, darkMode, setDarkMode }) => {
                 </div>
               </div>
             )}
+            {selectedKey === 'profile' && (
+              <div style={{ maxWidth: 400, margin: '0 auto', background: darkMode ? '#222' : '#fff', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', padding: 32 }}>
+                <h2 style={{ color: darkMode ? '#fff' : undefined }}>Profile</h2>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ color: darkMode ? '#fff' : undefined }}><b>Username</b></label>
+                  <input type="text" value={username || ''} disabled style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', background: '#eee', color: '#888', marginTop: 4 }} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ color: darkMode ? '#fff' : undefined }}><b>Email</b></label>
+                  <input type="text" value={userEmail || ''} disabled style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', background: '#eee', color: '#888', marginTop: 4 }} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ color: darkMode ? '#fff' : undefined }}><b>Old Password</b></label>
+                  <input type="password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined, marginTop: 4 }} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ color: darkMode ? '#fff' : undefined }}><b>New Password</b></label>
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined, marginTop: 4 }} />
+                </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ color: darkMode ? '#fff' : undefined }}><b>Confirm New Password</b></label>
+                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d9d9d9', background: darkMode ? '#333' : '#fff', color: darkMode ? '#fff' : undefined, marginTop: 4 }} />
+                </div>
+                <Button type="primary" block onClick={handlePasswordUpdate}>Update Password</Button>
+              </div>
+            )}
             {selectedKey === 'about' && (
               <div>
-                <h2>About Us</h2>
-                <p>
+                <h2 style={{ color: darkMode ? '#fff' : undefined }}>About Us</h2>
+                <p style={{ color: darkMode ? '#fff' : undefined }}>
                   <b>Cloud Valet</b> is your all-in-one cloud management solution, designed to simplify and secure your cloud operations.<br/>
                   Our mission is to empower users with intuitive tools for managing users, groups, tags, and virtual machines.<br/>
                   <br/>

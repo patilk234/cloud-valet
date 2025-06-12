@@ -138,6 +138,28 @@ async def update_user(
     await db.refresh(user)
     return {"username": user.username, "email": user.email, "permission": user.permission}
 
+# Change password
+@app.post("/users/{username}/password")
+async def change_password(
+    username: str,
+    old_password: str = Body(...),
+    new_password: str = Body(...),
+    user: str = Cookie(None),
+    db: AsyncSession = Depends(get_db)
+):
+    # Only allow user to change their own password
+    if user != username:
+        raise HTTPException(status_code=403, detail="You can only change your own password")
+    result = await db.execute(select(models.User).where(models.User.username == username))
+    user_obj = result.scalar_one_or_none()
+    if not user_obj:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not pwd_context.verify(old_password, user_obj.password_hash):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+    user_obj.password_hash = pwd_context.hash(new_password)
+    await db.commit()
+    return {"ok": True, "message": "Password updated"}
+
 # Group CRUD
 @app.post("/groups/")
 async def create_group(name: str, db: AsyncSession = Depends(get_db)):
