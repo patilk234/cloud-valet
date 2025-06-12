@@ -324,52 +324,26 @@ const Dashboard = ({ username, permission, darkMode, setDarkMode }) => {
       <>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, gap: 8 }}>
           <h1 style={{ margin: 0, flex: 1 }}>Virtual Machines</h1>
-          {selectMode && (permission === 'Write' || permission === 'Admin') && (
-            <>
-              <Button
-                icon={<PlayCircleOutlined />}
-                disabled={selectedVms.length === 0}
-                onClick={() => handleBulkAction('start')}
-              />
-              <Button
-                icon={<PoweroffOutlined />}
-                disabled={selectedVms.length === 0}
-                onClick={() => handleBulkAction('deallocate')}
-              />
-              <Button
-                icon={<DisconnectOutlined />}
-                disabled={selectedVms.length === 0}
-                onClick={() => handleBulkAction('poweroff')}
-              />
-              <Button
-                icon={<RedoOutlined />}
-                disabled={selectedVms.length === 0}
-                onClick={() => handleBulkAction('restart')}
-              />
-            </>
-          )}
-          {/* Bulk Action Button - always render for Write/Admin users */}
+          {/* Group Select and Bulk Action buttons in a flex row for alignment */}
           {(permission === 'Write' || permission === 'Admin') && (
-            <Button
-              type="primary"
-              disabled={!selectMode || selectedVms.length === 0}
-              onClick={() => setBulkActionModal(true)}
-              style={{ marginBottom: 16, marginLeft: 8 }}
-            >
-              Bulk Action
-            </Button>
-          )}
-          {(permission === 'Write' || permission === 'Admin') && (
-            <Button
-              type={selectMode ? 'default' : 'primary'}
-              onClick={() => {
-                setSelectMode((m) => !m);
-                setSelectedVms([]);
-              }}
-              style={{ marginLeft: 8 }}
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Button
+                type={selectMode ? 'default' : 'primary'}
+                onClick={() => {
+                  setSelectMode((m) => !m);
+                  setSelectedVms([]);
+                }}
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </Button>
+              <Button
+                type="primary"
+                disabled={!selectMode || selectedVms.length === 0}
+                onClick={() => setBulkActionModal(true)}
+              >
+                Bulk Action
+              </Button>
+            </div>
           )}
           <ReloadOutlined
             title="Refresh VM list"
