@@ -1,15 +1,9 @@
+
 name: 'Setup Node and Install Dependencies'
 description: 'Set up Node.js and install dependencies for React frontend'
 runs:
   using: 'composite'
   steps:
-    - name: Cache node modules
-      uses: actions/cache@v3
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('cloud-valet-frontend/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
