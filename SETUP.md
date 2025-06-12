@@ -111,3 +111,9 @@ This guide will help you set up and run both the backend (FastAPI) and frontend 
 ## Contact
 
 For help, open an issue or contact the maintainers at support@cloudvalet.com.
+
+---
+
+## UI Improvements
+
+- The Bulk Action and Select buttons in the Dashboard are now visually aligned for improved usability.

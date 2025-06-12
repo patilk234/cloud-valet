@@ -12,6 +12,7 @@ This document lists the main features available in the Cloud Valet Dashboard fro
 - Overview of virtual machines (VMs) and their statuses
 - Responsive navigation bar displaying logged-in username
 - Real-time updates of VM states (start/stop/status)
+- Bulk Action and Select buttons are visually aligned in the Dashboard for a consistent and user-friendly experience.
 
 ## Virtual Machine Management
 - List all VMs with details (name, status, tags, etc.)

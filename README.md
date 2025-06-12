@@ -76,3 +76,11 @@ All tests are run automatically in CI on every pull request.
 - Implement authentication
 - Add scheduling logic
 - Integrate with Azure, AWS, GCP, Heroku
+- Bulk Action and Select buttons are now visually aligned in the Dashboard for a cleaner UI.
+
+## Screenshots
+
+| Dashboard View | Bulk Action Modal | User Management | Add User | Credential Provider |
+|:-------------:|:----------------:|:---------------:|:--------:|:-------------------:|
+| ![Dashboard](screenshots/dashboard.png) | ![Bulk Action](screenshots/bulk_action.png) | ![User Management](screenshots/user_management.png) | ![Add User](screenshots/add_user.png) | ![Credential Provider](screenshots/credential_provider.png) |
+
