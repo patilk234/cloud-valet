@@ -35,6 +35,8 @@ This document lists the main features available in the Cloud Valet Dashboard fro
 
 ## Testing
 - Comprehensive frontend tests using React Testing Library and Jest
+- E2E tests using Cypress (frontend-only, all API calls mocked)
+- Cypress E2E tests run as a separate job in CI, with only the frontend server running
 - Global test setup for Ant Design compatibility
 
 ---

@@ -42,6 +42,19 @@ async def startup():
             admin_user = models.User(username="admin", password_hash=pwd_context.hash("admin123"), permission="Admin")
             db.add(admin_user)
             await db.commit()
+    # Ensure E2E Write user exists
+    async with SessionLocal() as db:
+        result = await db.execute(select(models.User).where(models.User.username == "writeuser"))
+        writeuser = result.scalar_one_or_none()
+        if not writeuser:
+            user = models.User(
+                username="writeuser",
+                email="w@x.com",
+                password_hash=pwd_context.hash("pw"),
+                permission="Write"
+            )
+            db.add(user)
+            await db.commit()
 
 async def get_db():
     db = SessionLocal()
@@ -246,7 +259,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
         print(f"/login: DB lookup for username={username!r} result: {user}")
         if user and pwd_context.verify(password, user.password_hash):
             response = RedirectResponse(url="/dashboard", status_code=HTTP_302_FOUND)
-            response.set_cookie(key="user", value=username)
+            response.set_cookie(key="user", value=username, httponly=False, samesite="lax", secure=False)
             print(f"/login: Login successful, setting cookie user={username!r}")
             return response
         print(f"/login: Login failed for username={username!r}")

@@ -13,4 +13,4 @@ runs:
         pip install -r requirements.txt
         pip install pytest pytest-asyncio httpx
       shell: bash
-      working-directory: Cloud-Valet/app
+      working-directory: 'Cloud-Valet/app'

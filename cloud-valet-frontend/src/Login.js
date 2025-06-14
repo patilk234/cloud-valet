@@ -9,13 +9,16 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const response = await fetch('/login', {
+      // Always use relative URL for login to work with reverse proxy in CI and production
+      const loginUrl = '/login';
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(values).toString(),
         credentials: 'include',
       });
-      if (response.redirected && response.url.endsWith('/dashboard')) {
+      if (response.ok) {
+        // SPA navigation after login
         navigate('/dashboard');
       } else {
         const html = await response.text();

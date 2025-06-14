@@ -17,6 +17,7 @@ fernet.key
 
 #ACT
 .actrc
+cypressACTscreenshot
 
 # VSCode
 .vscode/

@@ -18,38 +18,78 @@ jobs:
           POSTGRES_PASSWORD: cloudvaletpass
           POSTGRES_DB: cloudvaletdb
         ports:
-          - 55432:5432
+          - 55433:5432
         options: >-
           --health-cmd="pg_isready -U cloudvalet"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+    env:
+      DATABASE_URL: postgresql+asyncpg://cloudvalet:cloudvaletpass@localhost:55433/cloudvaletdb
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Python and Install Requirements
-        uses: ./.github/actions/setup-python-action
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          working-directory: Cloud-Valet/app
-      - name: Start FastAPI server and run backend tests
+          python-version: '3.12'
+      - name: Install backend requirements
+        working-directory: Cloud-Valet/app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Insert E2E user
+        working-directory: Cloud-Valet/app
+        run: |
+          export DATABASE_URL=${{ env.DATABASE_URL }}
+          python insert_e2e_user.py
+      - name: Run backend and Python tests together
+        working-directory: Cloud-Valet/app
         env:
           MOCK_AZURE: 1
-          DATABASE_URL: postgresql+asyncpg://cloudvalet:cloudvaletpass@localhost:55432/cloudvaletdb
+          DATABASE_URL: ${{ env.DATABASE_URL }}
         run: |
-          uvicorn main:app --host 127.0.0.1 --port 8000 --reload &
-          for i in {1..20}; do
-            curl -s http://127.0.0.1:8000/ && break
+          uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+          BACKEND_PID=$!
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/ > /dev/null; then
+              echo "Backend is up!"; break
+            fi
             sleep 1
           done
+          if ! ps -p $BACKEND_PID > /dev/null; then
+            echo "Backend failed to start"; exit 1
+          fi
           pytest
-        working-directory: Cloud-Valet/app
+          kill $BACKEND_PID
 
   frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install Node dependencies
-        run: npm install
+      - name: Install system dependencies for Cypress
+        run: sudo apt-get update && sudo apt-get install -y libnss3 libatk-bridge2.0-0 libgtk-3-0 libxss1 libasound2 libgbm-dev xvfb xsel
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run frontend E2E tests (Cypress, frontend-only)
         working-directory: cloud-valet-frontend
-      - name: Run frontend tests
-        run: npm test -- --watchAll=false
-        working-directory: cloud-valet-frontend
+        env:
+          MOCK_AZURE: 1
+        run: |
+          npm ci
+          npm run build
+          npx serve -s build -l 3000 --no-clipboard &
+          FRONTEND_PID=$!
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/ > /dev/null; then
+              echo "Frontend is up!"; break
+            fi
+            sleep 1
+          done
+          if ! ps -p $FRONTEND_PID > /dev/null; then
+            echo "Frontend failed to start"; exit 1
+          fi
+          npx cypress install
+          npx cypress run --config baseUrl=http://localhost:3000
+          kill $FRONTEND_PID

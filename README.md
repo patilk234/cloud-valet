@@ -65,6 +65,17 @@ npm test
 - Frontend tests use a global setup file `src/setupTests.js` to mock `window.matchMedia` for Ant Design compatibility.
 - The project uses `@testing-library/jest-dom` for improved assertions.
 
+### Frontend E2E (Cypress)
+
+```bash
+cd cloud-valet-frontend
+npm install
+npm run cypress:open   # interactive
+npm run cypress:run    # headless
+```
+- **No backend or database is required for Cypress E2E tests.** All API calls are fully mocked.
+- Cypress E2E tests run as a separate job in CI, with only the frontend server running.
+
 All tests are run automatically in CI on every pull request.
 
 ## Environment Variables

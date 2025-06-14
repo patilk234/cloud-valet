@@ -82,6 +82,35 @@ This guide will help you set up and run both the backend (FastAPI) and frontend 
 
 ---
 
+## Testing
+
+### Backend
+- Run backend tests with:
+  ```bash
+  cd Cloud-Valet/app
+  pytest
+  ```
+
+### Frontend
+- Run unit tests with:
+  ```bash
+  cd cloud-valet-frontend
+  npm test
+  ```
+- Run Cypress E2E tests (frontend-only, fully mocked):
+  ```bash
+  npm run cypress:open   # interactive
+  npm run cypress:run    # headless
+  ```
+  - No backend or DB is required for Cypress E2E tests.
+  - All API calls are mocked in the test files.
+
+### CI
+- Backend and frontend tests run as separate jobs in CI (see `.github/workflows/ci.yml`).
+- Cypress E2E tests run with only the frontend server running.
+
+---
+
 ## Development Tips
 
 - **Backend:**
