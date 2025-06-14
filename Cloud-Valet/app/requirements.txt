@@ -13,3 +13,8 @@ python-multipart
 cryptography
 azure-identity
 azure-mgmt-compute
+anyio
+pytest-asyncio
+pytest-tornasync
+pytest-trio
+pytest-twisted
